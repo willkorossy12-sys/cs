@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Car Finder</title>
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #ffffff; --text: #16202c; --muted: #5d6b7a;
+    --border: #d9dee5; --accent: #1c69d4; --accent-text: #ffffff; --chip: #eef3fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141a; --card: #18202a; --text: #e8edf3; --muted: #9aa8b7;
+      --border: #2a3644; --accent: #4a8ef0; --accent-text: #ffffff; --chip: #1f2a38;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 28px 16px 8px; max-width: 960px; margin: 0 auto; }
+  header h1 { margin: 0 0 4px; font-size: 1.8rem; }
+  header p { margin: 0; color: var(--muted); }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; }
+  form, .results { background: var(--card); border: 1px solid var(--border);
+                   border-radius: 12px; padding: 20px; }
+  fieldset { border: 0; padding: 0; margin: 0 0 18px; }
+  legend { font-weight: 600; margin-bottom: 8px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+  input, select { font: inherit; color: var(--text); background: var(--bg);
+                  border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; width: 100%; }
+  .check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 1rem; }
+  .check input { width: auto; }
+  .sites { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sites label { flex-direction: row; align-items: center; gap: 6px; background: var(--chip);
+                 padding: 6px 10px; border-radius: 999px; color: var(--text); font-size: .9rem; }
+  .sites input { width: auto; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 11px 18px;
+           background: var(--accent); color: var(--accent-text); cursor: pointer; }
+  button.secondary { background: var(--chip); color: var(--text); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .results { margin-top: 16px; display: none; }
+  .results h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  .summary { color: var(--muted); margin: 0 0 14px; }
+  .list { display: grid; gap: 10px; }
+  .item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+          border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .item .name { font-weight: 600; }
+  .item .note { color: var(--muted); font-size: .85rem; }
+  .item a { white-space: nowrap; text-decoration: none; background: var(--accent);
+            color: var(--accent-text); padding: 8px 14px; border-radius: 8px; font-weight: 600; }
+  .hint { color: var(--muted); font-size: .85rem; margin-top: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Car Finder</h1>
+  <p>Search Facebook Marketplace, eBay Motors, Craigslist, Autotrader, Cars.com and more from one place.</p>
+</header>
+
+<main>
+  <form id="search">
+    <fieldset>
+      <legend>Vehicle</legend>
+      <div class="grid">
+        <label>Year from <select id="yearMin"></select></label>
+        <label>Year to <select id="yearMax"></select></label>
+        <label>Make
+          <select id="make" required>
+            <option value="">Any make</option>
+          </select>
+        </label>
+        <label>Model <input id="model" list="models" placeholder="e.g. 3 Series"></label>
+        <label>Trim package <input id="trim" list="trims" placeholder="e.g. 330i xDrive, M Sport"></label>
+        <label>Max mileage
+          <select id="mileage">
+            <option value="">Any</option>
+            <option>25000</option><option>50000</option><option>75000</option>
+            <option>100000</option><option>150000</option><option>200000</option>
+          </select>
+        </label>
+      </div>
+      <datalist id="models"></datalist>
+      <datalist id="trims"></datalist>
+    </fieldset>
+
+    <fieldset>
+      <legend>Price</legend>
+      <div class="grid">
+        <label>Minimum price ($) <input id="priceMin" type="number" min="0" step="500" placeholder="0"></label>
+        <label>Maximum price ($) <input id="priceMax" type="number" min="0" step="500" placeholder="No max"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Location</legend>
+      <div class="grid">
+        <label>ZIP code <input id="zip" inputmode="numeric" maxlength="5" placeholder="e.g. 60601"></label>
+        <label>City (for Facebook / Craigslist) <input id="city" placeholder="e.g. Chicago"></label>
+        <label>How far
+          <select id="radius">
+            <option value="10">10 miles</option>
+            <option value="25">25 miles</option>
+            <option value="50" selected>50 miles</option>
+            <option value="100">100 miles</option>
+            <option value="200">200 miles</option>
+            <option value="500">500 miles</option>
+          </select>
+        </label>
+      </div>
+      <p><label class="check"><input type="checkbox" id="nationwide"> Search nationwide</label></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Websites</legend>
+      <div class="sites" id="sites"></div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit">Search</button>
+      <button type="button" class="secondary" id="reset">Clear</button>
+    </div>
+  </form>
+
+  <section class="results" id="results">
+    <h2>Your searches</h2>
+    <p class="summary" id="summary"></p>
+    <div class="list" id="list"></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" id="openAll">Open all in new tabs</button>
+    </div>
+    <p class="hint">Each button opens that site's own search with your filters filled in. If "Open all" only opens one tab, allow pop-ups for this page.</p>
+  </section>
+</main>
+
+<script>
+const MAKES = {
+  "BMW": { models: ["1 Series","2 Series","3 Series","4 Series","5 Series","7 Series","8 Series","X1","X2","X3","X4","X5","X6","X7","Z4","i4","i5","i7","iX","M2","M3","M4","M5","M8"],
+           trims: ["228i","230i","330i","330e","M340i","430i","M440i","530i","540i","M550i","740i","760i","xDrive","sDrive","M Sport","Competition","CS"] },
+  "Acura": { models: ["ILX","Integra","TLX","RDX","MDX","NSX"] },
+  "Audi": { models: ["A3","A4","A5","A6","A7","A8","Q3","Q5","Q7","Q8","e-tron","R8","RS5","S4"] },
+  "Chevrolet": { models: ["Camaro","Corvette","Malibu","Silverado 1500","Tahoe","Suburban","Equinox","Traverse","Colorado","Blazer"] },
+  "Dodge": { models: ["Challenger","Charger","Durango","Ram 1500"] },
+  "Ford": { models: ["F-150","Mustang","Explorer","Escape","Bronco","Ranger","Edge","Expedition","Focus","Fusion"] },
+  "GMC": { models: ["Sierra 1500","Yukon","Canyon","Acadia","Terrain"] },
+  "Honda": { models: ["Civic","Accord","CR-V","HR-V","Pilot","Odyssey","Ridgeline"] },
+  "Hyundai": { models: ["Elantra","Sonata","Tucson","Santa Fe","Kona","Palisade"] },
+  "Jeep": { models: ["Wrangler","Grand Cherokee","Cherokee","Compass","Gladiator"] },
+  "Kia": { models: ["Forte","K5","Sportage","Sorento","Telluride","Soul"] },
+  "Lexus": { models: ["IS","ES","GS","LS","RX","NX","GX","LX"] },
+  "Mazda": { models: ["Mazda3","Mazda6","CX-5","CX-30","CX-9","MX-5 Miata"] },
+  "Mercedes-Benz": { models: ["C-Class","E-Class","S-Class","GLA","GLC","GLE","GLS","G-Class","AMG GT"] },
+  "Nissan": { models: ["Altima","Sentra","Maxima","Rogue","Pathfinder","Frontier","Titan","370Z","GT-R"] },
+  "Porsche": { models: ["911","Cayenne","Macan","Panamera","Taycan","Boxster","Cayman"] },
+  "Ram": { models: ["1500","2500","3500"] },
+  "Subaru": { models: ["Impreza","WRX","Outback","Forester","Crosstrek","Ascent","BRZ"] },
+  "Tesla": { models: ["Model 3","Model S","Model X","Model Y","Cybertruck"] },
+  "Toyota": { models: ["Camry","Corolla","RAV4","Highlander","Tacoma","Tundra","4Runner","Prius","Supra","Sienna"] },
+  "Volkswagen": { models: ["Jetta","Golf","GTI","Passat","Tiguan","Atlas"] }
+};
+
+// Each site builds a link to its own search page with the user's filters.
+const SITES = [
+  { id: "facebook", name: "Facebook Marketplace", build: s => {
+      const p = new URLSearchParams({ query: s.text, exact: "false" });
+      if (s.priceMin) p.set("minPrice", s.priceMin);
+      if (s.priceMax) p.set("maxPrice", s.priceMax);
+      if (s.yearMin) p.set("minYear", s.yearMin);
+      if (s.yearMax) p.set("maxYear", s.yearMax);
+      if (s.mileage) p.set("maxMileage", s.mileage);
+      const city = s.city ? s.city.toLowerCase().replace(/[^a-z]/g, "") : "";
+      const base = city && !s.nationwide
+        ? `https://www.facebook.com/marketplace/${city}/vehicles`
+        : "https://www.facebook.com/marketplace/category/vehicles";
+      return `${base}?${p}`;
+    },
+    note: s => s.city && !s.nationwide ? `Near ${s.city}. Set the exact radius on Facebook.` : "Uses the location set on your Facebook account." },
+
+  { id: "ebay", name: "eBay Motors", build: s => {
+      const p = new URLSearchParams({ _nkw: s.text, _sacat: "6001" });
+      if (s.priceMin) p.set("_udlo", s.priceMin);
+      if (s.priceMax) p.set("_udhi", s.priceMax);
+      if (s.zip) p.set("_stpos", s.zip);
+      if (s.zip && !s.nationwide) { p.set("_sadis", s.radius); p.set("LH_PrefLoc", "99"); }
+      return `https://www.ebay.com/sch/i.html?${p}`;
+    },
+    note: s => s.nationwide || !s.zip ? "Nationwide." : `Within ${s.radius} miles of ${s.zip}.` },
+
+  { id: "craigslist", name: "Craigslist", build: s => {
+      const p = new URLSearchParams({ query: s.text });
+      if (s.priceMin) p.set("min_price", s.priceMin);
+      if (s.priceMax) p.set("max_price", s.priceMax);
+      if (s.yearMin) p.set("min_auto_year", s.yearMin);
+      if (s.yearMax) p.set("max_auto_year", s.yearMax);
+      if (s.mileage) p.set("max_auto_miles", s.mileage);
+      if (s.zip) { p.set("postal", s.zip); if (!s.nationwide) p.set("search_distance", s.radius); }
+      const sub = s.city ? s.city.toLowerCase().replace(/[^a-z]/g, "") : "www";
+      return `https://${sub}.craigslist.org/search/cta?${p}`;
+    },
+    note: () => "Craigslist is regional. Pick the nearest city if the link doesn't load." },
+
+  { id: "autotrader", name: "Autotrader", build: s => {
+      const make = s.make ? "/" + slug(s.make) : "/all-makes";
+      const model = s.make && s.model ? "/" + slug(s.model) : "";
+      const p = new URLSearchParams();
+      if (s.zip) p.set("zip", s.zip);
+      p.set("searchRadius", s.nationwide ? "0" : s.radius);
+      if (s.yearMin) p.set("startYear", s.yearMin);
+      if (s.yearMax) p.set("endYear", s.yearMax);
+      if (s.priceMin) p.set("minPrice", s.priceMin);
+      if (s.priceMax) p.set("maxPrice", s.priceMax);
+      if (s.mileage) p.set("mileage", s.mileage);
+      if (s.trim) p.set("keywordPhrases", s.trim);
+      return `https://www.autotrader.com/cars-for-sale/all-cars${make}${model}?${p}`;
+    },
+    note: () => "" },
+
+  { id: "carscom", name: "Cars.com", build: s => {
+      const p = new URLSearchParams({ stock_type: "used", sort: "best_match_desc" });
+      if (s.make) p.append("makes[]", slug(s.make));
+      const kw = [s.model, s.trim].filter(Boolean).join(" ");
+      if (kw) p.set("keyword", kw);
+      if (s.yearMin) p.set("year_min", s.yearMin);
+      if (s.yearMax) p.set("year_max", s.yearMax);
+      if (s.priceMin) p.set("list_price_min", s.priceMin);
+      if (s.priceMax) p.set("list_price_max", s.priceMax);
+      if (s.mileage) p.set("mileage_max", s.mileage);
+      if (s.zip) p.set("zip", s.zip);
+      p.set("maximum_distance", s.nationwide ? "all" : s.radius);
+      return `https://www.cars.com/shopping/results/?${p}`;
+    },
+    note: () => "" },
+
+  { id: "google", name: "Google (everything else)", build: s => {
+      const q = `${s.text} for sale` + (s.priceMax ? ` under $${s.priceMax}` : "") +
+                (!s.nationwide && (s.city || s.zip) ? ` near ${s.city || s.zip}` : "");
+      return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+    },
+    note: () => "Catches dealer sites, OfferUp, CarGurus and others." }
+];
+
+function slug(t) { return t.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+const $ = id => document.getElementById(id);
+
+// Fill dropdowns
+const thisYear = new Date().getFullYear() + 1;
+for (const id of ["yearMin", "yearMax"]) {
+  $(id).add(new Option("Any", ""));
+  for (let y = thisYear; y >= 1960; y--) $(id).add(new Option(y, y));
+}
+for (const m of Object.keys(MAKES)) $("make").add(new Option(m, m));
+$("make").value = "BMW";
+$("make").required = false;
+
+function refreshLists() {
+  const info = MAKES[$("make").value] || {};
+  $("models").innerHTML = (info.models || []).map(m => `<option value="${m}">`).join("");
+  $("trims").innerHTML = (info.trims || []).map(t => `<option value="${t}">`).join("");
+}
+$("make").addEventListener("change", () => { $("model").value = ""; $("trim").value = ""; refreshLists(); });
+refreshLists();
+
+$("nationwide").addEventListener("change", e => { $("radius").disabled = e.target.checked; });
+
+$("sites").innerHTML = SITES.map(s =>
+  `<label><input type="checkbox" value="${s.id}" checked> ${s.name}</label>`).join("");
+
+let links = [];
+
+$("search").addEventListener("submit", e => {
+  e.preventDefault();
+  let yearMin = $("yearMin").value, yearMax = $("yearMax").value;
+  if (yearMin && yearMax && +yearMin > +yearMax) [yearMin, yearMax] = [yearMax, yearMin];
+  let priceMin = $("priceMin").value, priceMax = $("priceMax").value;
+  if (priceMin && priceMax && +priceMin > +priceMax) [priceMin, priceMax] = [priceMax, priceMin];
+
+  const s = {
+    yearMin, yearMax, priceMin, priceMax,
+    make: $("make").value, model: $("model").value.trim(), trim: $("trim").value.trim(),
+    mileage: $("mileage").value, zip: $("zip").value.trim(), city: $("city").value.trim(),
+    radius: $("radius").value, nationwide: $("nationwide").checked
+  };
+  const yearText = yearMin && yearMax && yearMin !== yearMax ? "" : (yearMin || yearMax || "");
+  s.text = [yearText, s.make, s.model, s.trim].filter(Boolean).join(" ") || "car";
+
+  const chosen = [...document.querySelectorAll("#sites input:checked")].map(i => i.value);
+  const picked = SITES.filter(site => chosen.includes(site.id));
+  links = picked.map(site => site.build(s));
+
+  $("list").innerHTML = picked.map((site, i) => `
+    <div class="item">
+      <div><div class="name">${site.name}</div><div class="note">${site.note(s)}</div></div>
+      <a href="${links[i]}" target="_blank" rel="noopener">Open</a>
+    </div>`).join("") || "<p>Pick at least one website.</p>";
+
+  const parts = [
+    [yearMin, yearMax].filter(Boolean).join("–"), s.make, s.model, s.trim,
+    priceMin || priceMax ? `$${priceMin || 0} – ${priceMax ? "$" + priceMax : "any"}` : "",
+    s.mileage ? `under ${(+s.mileage).toLocaleString()} mi` : "",
+    s.nationwide ? "nationwide" : (s.zip || s.city) ? `within ${s.radius} mi of ${s.zip || s.city}` : ""
+  ].filter(Boolean);
+  $("summary").textContent = parts.join(" · ");
+  $("results").style.display = "block";
+  $("results").scrollIntoView({ behavior: "smooth" });
+});
+
+$("openAll").addEventListener("click", () => links.forEach(u => window.open(u, "_blank", "noopener")));
+$("reset").addEventListener("click", () => {
+  $("search").reset(); $("make").value = "BMW"; refreshLists();
+  $("radius").disabled = false; $("results").style.display = "none";
+});
+</script>
+</body>
+</html>
